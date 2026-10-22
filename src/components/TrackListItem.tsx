@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, ActivityIndicator } fr
 import { Ionicons } from '@expo/vector-icons';
 import { Track } from '../types/music';
 import { Colors } from '../constants/colors';
+import { SoundwaveVisualizer } from './SoundwaveVisualizer';
 
 interface TrackListItemProps {
   track: Track;
@@ -10,8 +11,10 @@ interface TrackListItemProps {
   isPlaying: boolean;
   isDownloaded: boolean;
   isDownloading: boolean;
+  isFavorite: boolean;
   onPress: () => void;
   onDownload: () => void;
+  onToggleFavorite: () => void;
   onDeleteDownload?: () => void;
 }
 
@@ -21,10 +24,19 @@ export const TrackListItem: React.FC<TrackListItemProps> = ({
   isPlaying,
   isDownloaded,
   isDownloading,
+  isFavorite,
   onPress,
   onDownload,
+  onToggleFavorite,
   onDeleteDownload,
 }) => {
+  const formatDuration = (ms: number) => {
+    const totalSecs = Math.floor(ms / 1000);
+    const m = Math.floor(totalSecs / 60);
+    const s = totalSecs % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
   return (
     <TouchableOpacity
       style={[styles.container, isCurrent && styles.containerActive]}
@@ -36,11 +48,7 @@ export const TrackListItem: React.FC<TrackListItemProps> = ({
         <Image source={{ uri: track.artwork }} style={styles.artwork} resizeMode="cover" />
         {isCurrent && (
           <View style={styles.playingOverlay}>
-            <Ionicons
-              name={isPlaying ? 'pause' : 'play'}
-              size={18}
-              color="#FFF"
-            />
+            <SoundwaveVisualizer isPlaying={isPlaying} barColor="#FFF" size="small" />
           </View>
         )}
       </View>
@@ -58,17 +66,29 @@ export const TrackListItem: React.FC<TrackListItemProps> = ({
         </Text>
         <View style={styles.tagRow}>
           <Text style={styles.genreTag}>{track.genre}</Text>
-          {track.releaseYear && <Text style={styles.yearTag}>{track.releaseYear}</Text>}
+          <Text style={styles.durationTag}>{formatDuration(track.durationMs)}</Text>
         </View>
       </View>
 
-      {/* Action Buttons */}
+      {/* Action Buttons: Favorite + Download */}
       <View style={styles.actionsRow}>
+        <TouchableOpacity
+          style={styles.actionIconBtn}
+          onPress={onToggleFavorite}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons
+            name={isFavorite ? 'heart' : 'heart-outline'}
+            size={20}
+            color={isFavorite ? '#EF4444' : Colors.textMuted}
+          />
+        </TouchableOpacity>
+
         {isDownloading ? (
-          <ActivityIndicator size="small" color={Colors.primary} style={styles.iconBtn} />
+          <ActivityIndicator size="small" color={Colors.primary} style={styles.actionIconBtn} />
         ) : isDownloaded ? (
           <TouchableOpacity
-            style={styles.iconBtn}
+            style={styles.actionIconBtn}
             onPress={onDeleteDownload || onDownload}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
@@ -76,7 +96,7 @@ export const TrackListItem: React.FC<TrackListItemProps> = ({
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
-            style={styles.downloadBtn}
+            style={styles.actionIconBtn}
             onPress={onDownload}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
@@ -95,7 +115,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#1A1E29',
+    borderBottomColor: '#161B26',
   },
   containerActive: {
     backgroundColor: '#161B26',
@@ -103,7 +123,7 @@ const styles = StyleSheet.create({
   artContainer: {
     width: 52,
     height: 52,
-    borderRadius: 8,
+    borderRadius: 10,
     overflow: 'hidden',
     position: 'relative',
     backgroundColor: Colors.card,
@@ -143,7 +163,7 @@ const styles = StyleSheet.create({
   tagRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     marginTop: 4,
   },
   genreTag: {
@@ -155,18 +175,17 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
     borderRadius: 4,
   },
-  yearTag: {
+  durationTag: {
     fontSize: 10,
     color: Colors.textMuted,
+    fontWeight: '500',
   },
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
-  iconBtn: {
-    padding: 4,
-  },
-  downloadBtn: {
+  actionIconBtn: {
     padding: 4,
   },
 });

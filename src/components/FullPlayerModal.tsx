@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Track } from '../types/music';
 import { Colors } from '../constants/colors';
+import { SoundwaveVisualizer } from './SoundwaveVisualizer';
 
 const { width } = Dimensions.get('window');
 const ARTWORK_SIZE = width * 0.76;
@@ -25,14 +26,19 @@ interface FullPlayerModalProps {
   isLooping: boolean;
   isShuffling: boolean;
   isDownloaded: boolean;
+  isFavorite: boolean;
+  sleepTimerMinutes: number | null;
   onClose: () => void;
   onPlayPause: () => void;
   onNext: () => void;
   onPrev: () => void;
   onToggleLoop: () => void;
   onToggleShuffle: () => void;
+  onToggleFavorite: () => void;
   onDownload: () => void;
   onSeek: (seconds: number) => void;
+  onOpenSleepTimer: () => void;
+  onOpenQueue: () => void;
 }
 
 export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
@@ -44,14 +50,19 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
   isLooping,
   isShuffling,
   isDownloaded,
+  isFavorite,
+  sleepTimerMinutes,
   onClose,
   onPlayPause,
   onNext,
   onPrev,
   onToggleLoop,
   onToggleShuffle,
+  onToggleFavorite,
   onDownload,
   onSeek,
+  onOpenSleepTimer,
+  onOpenQueue,
 }) => {
   if (!track) return null;
 
@@ -67,7 +78,7 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
       <SafeAreaView style={styles.container}>
-        {/* Top Bar */}
+        {/* Top Header Bar */}
         <View style={styles.topBar}>
           <TouchableOpacity style={styles.circleBtn} onPress={onClose} activeOpacity={0.8}>
             <Ionicons name="chevron-down" size={26} color="#FFF" />
@@ -78,31 +89,55 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
             <Text style={styles.topSub} numberOfLines={1}>{track.album}</Text>
           </View>
 
-          <TouchableOpacity style={styles.circleBtn} onPress={onDownload} activeOpacity={0.8}>
-            <Ionicons
-              name={isDownloaded ? 'checkmark-circle' : 'download-outline'}
-              size={22}
-              color={isDownloaded ? Colors.primary : '#FFF'}
-            />
+          <TouchableOpacity style={styles.circleBtn} onPress={onOpenQueue} activeOpacity={0.8}>
+            <Ionicons name="list" size={22} color="#FFF" />
           </TouchableOpacity>
         </View>
 
-        {/* Center Artwork */}
+        {/* Center Artwork with Glow */}
         <View style={styles.artSection}>
           <View style={styles.artShadowBox}>
             <Image source={{ uri: track.artwork }} style={styles.artwork} resizeMode="cover" />
           </View>
         </View>
 
-        {/* Track Metadata */}
+        {/* Track Metadata & Favorite */}
         <View style={styles.metaSection}>
           <View style={styles.titleCol}>
             <Text style={styles.trackTitle} numberOfLines={1}>{track.title}</Text>
             <Text style={styles.trackArtist} numberOfLines={1}>{track.artist}</Text>
           </View>
-          <View style={styles.genrePill}>
-            <Text style={styles.genreText}>{track.genre}</Text>
+
+          <View style={styles.metaActions}>
+            <TouchableOpacity
+              style={styles.metaIconBtn}
+              onPress={onToggleFavorite}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons
+                name={isFavorite ? 'heart' : 'heart-outline'}
+                size={26}
+                color={isFavorite ? '#EF4444' : '#FFF'}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.metaIconBtn}
+              onPress={onDownload}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons
+                name={isDownloaded ? 'checkmark-circle' : 'arrow-down-circle-outline'}
+                size={26}
+                color={isDownloaded ? Colors.primary : '#FFF'}
+              />
+            </TouchableOpacity>
           </View>
+        </View>
+
+        {/* Soundwave Visualizer in player */}
+        <View style={styles.visualizerRow}>
+          <SoundwaveVisualizer isPlaying={isPlaying} barColor={Colors.primary} size="large" />
         </View>
 
         {/* Progress Bar & Timestamps */}
@@ -112,7 +147,7 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
             activeOpacity={1}
             onPress={(e) => {
               const touchX = e.nativeEvent.locationX;
-              const barWidth = width - 40;
+              const barWidth = width - 48;
               const ratio = Math.max(0, Math.min(touchX / barWidth, 1));
               onSeek(ratio * safeDuration);
             }}
@@ -158,6 +193,30 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
             />
           </TouchableOpacity>
         </View>
+
+        {/* Extra Bottom Utilities (Sleep Timer + Audio Mode) */}
+        <View style={styles.utilityBar}>
+          <TouchableOpacity
+            style={[styles.utilityPill, sleepTimerMinutes !== null && styles.utilityPillActive]}
+            onPress={onOpenSleepTimer}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name="moon"
+              size={14}
+              color={sleepTimerMinutes !== null ? '#FFF' : Colors.textSecondary}
+              style={{ marginRight: 6 }}
+            />
+            <Text style={[styles.utilityText, sleepTimerMinutes !== null && styles.utilityTextActive]}>
+              {sleepTimerMinutes !== null ? `Sleep: ${sleepTimerMinutes}m` : 'Sleep Timer'}
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.qualityPill}>
+            <Ionicons name="volume-high" size={13} color={Colors.primary} style={{ marginRight: 4 }} />
+            <Text style={styles.qualityText}>Lossless 256kbps</Text>
+          </View>
+        </View>
       </SafeAreaView>
     </Modal>
   );
@@ -166,20 +225,21 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.playerBg,
+    backgroundColor: '#0A0C13',
   },
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingTop: 10,
+    paddingBottom: 8,
   },
   circleBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#1E2333',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#181C28',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -204,7 +264,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 6,
   },
   artShadowBox: {
     width: ARTWORK_SIZE,
@@ -227,11 +287,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    marginBottom: 20,
+    marginBottom: 8,
   },
   titleCol: {
     flex: 1,
-    marginRight: 10,
+    marginRight: 12,
   },
   trackTitle: {
     color: '#FFF',
@@ -243,22 +303,23 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontSize: 14,
     marginTop: 4,
-    fontWeight: '500',
+    fontWeight: '600',
   },
-  genrePill: {
-    backgroundColor: 'rgba(139, 92, 246, 0.18)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+  metaActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  genreText: {
-    color: Colors.accentViolet,
-    fontSize: 11,
-    fontWeight: '700',
+  metaIconBtn: {
+    padding: 4,
+  },
+  visualizerRow: {
+    alignItems: 'center',
+    marginVertical: 6,
   },
   progressSection: {
-    paddingHorizontal: 20,
-    marginBottom: 28,
+    paddingHorizontal: 24,
+    marginBottom: 20,
   },
   progressBarTrack: {
     height: 6,
@@ -295,12 +356,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 28,
-    paddingBottom: 34,
+    marginBottom: 16,
   },
   playPauseBtn: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+    width: 66,
+    height: 66,
+    borderRadius: 33,
     backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
@@ -309,5 +370,50 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 12,
     elevation: 8,
+  },
+  utilityBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+  },
+  utilityPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#181C28',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#232838',
+  },
+  utilityPillActive: {
+    backgroundColor: 'rgba(139, 92, 246, 0.3)',
+    borderColor: Colors.accentViolet,
+  },
+  utilityText: {
+    color: Colors.textSecondary,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  utilityTextActive: {
+    color: '#FFF',
+    fontWeight: '700',
+  },
+  qualityPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#141E1C',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(29, 185, 84, 0.3)',
+  },
+  qualityText: {
+    color: Colors.primary,
+    fontSize: 10,
+    fontWeight: '700',
   },
 });
