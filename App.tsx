@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,11 +7,15 @@ import {
   Alert,
   RefreshControl,
   SafeAreaView,
-  ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import {
+  useAudioPlayer,
+  useAudioPlayerStatus,
+  setAudioModeAsync,
+  AudioModule,
+} from 'expo-audio';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from './src/constants/colors';
 import { Track, MusicTab, DownloadedItem } from './src/types/music';
@@ -28,6 +32,7 @@ import { FullPlayerModal } from './src/components/FullPlayerModal';
 import { SleepTimerModal } from './src/components/SleepTimerModal';
 import { QueueModal } from './src/components/QueueModal';
 import { BottomNavigation } from './src/components/BottomNavigation';
+import { ShimmerLoader } from './src/components/ShimmerLoader';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<MusicTab>('discover');
@@ -42,6 +47,7 @@ export default function App() {
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isLooping, setIsLooping] = useState(false);
   const [isShuffling, setIsShuffling] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState(1.0);
   
   // Modals
   const [showFullPlayer, setShowFullPlayer] = useState(false);
@@ -52,9 +58,25 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Audio Engine using official Expo SDK 57 expo-audio
-  const player = useAudioPlayer();
+  // Audio Engine with 250ms smooth update interval
+  const player = useAudioPlayer(undefined, { updateInterval: 250 });
   const status = useAudioPlayerStatus(player);
+
+  // Initialize official background audio mode on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        await setAudioModeAsync({
+          playsInSilentMode: true,
+          shouldPlayInBackground: true,
+          interruptionMode: 'doNotMix',
+          shouldRouteThroughEarpiece: false,
+        });
+      } catch (err) {
+        console.log('Background audio mode setup notice:', err);
+      }
+    })();
+  }, []);
 
   // Load favorites & downloads on mount
   const loadInitialData = useCallback(async () => {
@@ -99,7 +121,7 @@ export default function App() {
     loadContent();
   }, [currentTab, selectedGenre, loadContent]);
 
-  // Sleep Timer interval countdown
+  // Sleep Timer countdown
   useEffect(() => {
     if (sleepTimerMinutes === null || sleepTimerMinutes <= 0) return;
 
@@ -117,7 +139,7 @@ export default function App() {
     return () => clearInterval(interval);
   }, [sleepTimerMinutes, player]);
 
-  // Auto transition to next track
+  // Auto transition to next track on finish
   useEffect(() => {
     if (status.currentTime > 0 && status.duration > 0) {
       if (status.currentTime >= status.duration - 0.5) {
@@ -146,7 +168,20 @@ export default function App() {
       setCurrentTrack(track);
       player.replace(audioSource);
       player.loop = isLooping;
+      player.playbackRate = playbackRate;
       player.play();
+
+      // Enable lockscreen notification controls & background audio info
+      try {
+        (AudioModule as any)?.setActiveForLockScreen?.(true, {
+          title: track.title,
+          artist: track.artist,
+          albumTitle: track.album,
+          artworkUrl: track.artwork,
+        });
+      } catch (e) {
+        console.log('Lockscreen controls notice:', e);
+      }
     } catch (err) {
       console.log('Error playing audio track:', err);
     }
@@ -174,6 +209,28 @@ export default function App() {
     const currentIndex = currentList.findIndex((t) => t.id === currentTrack?.id);
     const prevIndex = currentIndex <= 0 ? currentList.length - 1 : currentIndex - 1;
     handlePlayTrack(currentList[prevIndex]);
+  };
+
+  const durationSec = status.duration > 0 ? status.duration : (currentTrack ? currentTrack.durationMs / 1000 : 180);
+  const currentTimeSec = status.currentTime || 0;
+  const progressRatio = durationSec > 0 ? currentTimeSec / durationSec : 0;
+
+  // Jump Forward 10 seconds ("music agy krny")
+  const handleForward10 = () => {
+    const target = Math.min(durationSec, currentTimeSec + 10);
+    player.seekTo(target);
+  };
+
+  // Jump Rewind 10 seconds ("music pichy krny")
+  const handleRewind10 = () => {
+    const target = Math.max(0, currentTimeSec - 10);
+    player.seekTo(target);
+  };
+
+  // Audio Playback Speed toggle
+  const handleChangeSpeed = (speed: number) => {
+    setPlaybackRate(speed);
+    player.playbackRate = speed;
   };
 
   const handleToggleFavorite = async (trackId: string) => {
@@ -231,10 +288,6 @@ export default function App() {
 
   const isDownloaded = (id: string) => downloadedItems.some((d) => d.id === id);
 
-  const durationSec = status.duration > 0 ? status.duration : (currentTrack ? currentTrack.durationMs / 1000 : 30);
-  const currentTimeSec = status.currentTime || 0;
-  const progressRatio = durationSec > 0 ? currentTimeSec / durationSec : 0;
-
   const featuredTrack = currentTab === 'discover' && tracks.length > 0 ? tracks[0] : null;
   const listTracks = currentTab === 'discover' && tracks.length > 0 ? tracks.slice(1) : tracks;
 
@@ -242,17 +295,17 @@ export default function App() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
 
-      {/* Top Header */}
+      {/* Top Header with dynamic time greeting */}
       <Header
         title="SoundWave"
         subtitle={
           currentTab === 'downloads'
-            ? 'Offline Music Library'
+            ? 'Offline Music Vault'
             : currentTab === 'search'
-            ? 'Search & Discover'
-            : 'Trending Music Feed'
+            ? 'Search & Stream Music'
+            : undefined
         }
-        rightBadge={currentTab === 'downloads' ? 'OFFLINE' : undefined}
+        rightBadge={currentTab === 'downloads' ? 'OFFLINE' : 'HI-FI'}
       />
 
       {/* Tab Specific Top Bars */}
@@ -283,7 +336,7 @@ export default function App() {
               <Text style={styles.offlineTitle}>
                 {downloadedItems.length} {downloadedItems.length === 1 ? 'Track' : 'Tracks'} Saved
               </Text>
-              <Text style={styles.offlineSub}>Playable anywhere without mobile data</Text>
+              <Text style={styles.offlineSub}>100% full-length offline playback</Text>
             </View>
           </View>
 
@@ -293,22 +346,17 @@ export default function App() {
               onPress={() => handlePlayTrack(downloadedItems[0].track)}
               activeOpacity={0.85}
             >
-              <Ionicons name="play" size={14} color="#FFF" style={{ marginRight: 4 }} />
+              <Ionicons name="play" size={13} color="#07090E" style={{ marginRight: 4 }} />
               <Text style={styles.playAllText}>Play All</Text>
             </TouchableOpacity>
           )}
         </View>
       )}
 
-      {/* Main Track List with Hero Banner */}
+      {/* Main Track List with Hero Banner & Animated Shimmer Loading */}
       <View style={styles.listContainer}>
         {loading ? (
-          <View style={styles.loaderCenter}>
-            <ActivityIndicator size="large" color={Colors.primary} />
-            <Text style={styles.loaderText}>
-              {currentTab === 'downloads' ? 'Loading offline library...' : 'Fetching music...'}
-            </Text>
-          </View>
+          <ShimmerLoader />
         ) : (
           <FlatList
             data={listTracks}
@@ -335,9 +383,10 @@ export default function App() {
                 tintColor={Colors.primary}
               />
             }
-            renderItem={({ item }) => (
+            renderItem={({ item, index }) => (
               <TrackListItem
                 track={item}
+                index={index}
                 isCurrent={currentTrack?.id === item.id}
                 isPlaying={currentTrack?.id === item.id && status.playing}
                 isDownloaded={isDownloaded(item.id)}
@@ -365,7 +414,7 @@ export default function App() {
                 </Text>
                 <Text style={styles.emptySubtitle}>
                   {currentTab === 'downloads'
-                    ? 'Tap the download arrow on any track in Explore or Search to save it for offline listening!'
+                    ? 'Tap the download arrow on any track in Explore or Search to save full 320kbps songs!'
                     : 'Try searching for an artist, song title, or change the genre category.'}
                 </Text>
               </View>
@@ -374,7 +423,7 @@ export default function App() {
         )}
       </View>
 
-      {/* Persistent Mini Player Bar */}
+      {/* Persistent Mini Player Bar with animated spinning vinyl */}
       {currentTrack && (
         <MiniPlayerBar
           track={currentTrack}
@@ -385,6 +434,7 @@ export default function App() {
             else player.play();
           }}
           onNext={handleNextTrack}
+          onRewind10={handleRewind10}
           onPress={() => setShowFullPlayer(true)}
         />
       )}
@@ -396,7 +446,7 @@ export default function App() {
         downloadCount={downloadedItems.length}
       />
 
-      {/* Fullscreen Player Modal */}
+      {/* Fullscreen Player Modal with Vinyl Turntable & Animations */}
       <FullPlayerModal
         visible={showFullPlayer}
         track={currentTrack}
@@ -408,6 +458,7 @@ export default function App() {
         isDownloaded={currentTrack ? isDownloaded(currentTrack.id) : false}
         isFavorite={currentTrack ? favoriteIds.includes(currentTrack.id) : false}
         sleepTimerMinutes={sleepTimerMinutes}
+        playbackRate={playbackRate}
         onClose={() => setShowFullPlayer(false)}
         onPlayPause={() => {
           if (status.playing) player.pause();
@@ -415,6 +466,8 @@ export default function App() {
         }}
         onNext={handleNextTrack}
         onPrev={handlePrevTrack}
+        onForward10={handleForward10}
+        onRewind10={handleRewind10}
         onToggleLoop={() => {
           const next = !isLooping;
           setIsLooping(next);
@@ -430,6 +483,7 @@ export default function App() {
         onSeek={(seconds) => {
           player.seekTo(seconds);
         }}
+        onChangeSpeed={handleChangeSpeed}
         onOpenSleepTimer={() => setShowSleepTimer(true)}
         onOpenQueue={() => setShowQueue(true)}
       />
@@ -468,26 +522,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#151924',
+    backgroundColor: '#111522',
     marginHorizontal: 16,
     marginVertical: 8,
     padding: 12,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#242B3D',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   offlineStatsLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   offlineIconBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: 'rgba(29, 185, 84, 0.15)',
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 245, 155, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 245, 155, 0.3)',
   },
   offlineTitle: {
     color: '#FFF',
@@ -495,34 +551,27 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   offlineSub: {
-    color: Colors.textMuted,
-    fontSize: 10,
+    color: Colors.textSecondary,
+    fontSize: 11,
     marginTop: 2,
   },
   playAllBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.primary,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 7,
-    borderRadius: 14,
+    borderRadius: 16,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 3,
   },
   playAllText: {
-    color: '#FFF',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  loaderCenter: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  loaderText: {
-    color: Colors.textSecondary,
-    fontSize: 13,
-    marginTop: 12,
-    fontWeight: '500',
+    color: '#07090E',
+    fontSize: 12,
+    fontWeight: '800',
   },
   emptyContainer: {
     alignItems: 'center',

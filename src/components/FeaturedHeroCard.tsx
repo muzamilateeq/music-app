@@ -22,26 +22,34 @@ export const FeaturedHeroCard: React.FC<FeaturedHeroCardProps> = ({
 }) => {
   return (
     <View style={styles.cardContainer}>
-      {/* Background Artwork with Gradient Overlay */}
-      <Image source={{ uri: track.artwork }} style={styles.bgImage} resizeMode="cover" blurRadius={18} />
+      {/* Background Artwork with Blur Overlay */}
+      <Image source={{ uri: track.artwork }} style={styles.bgImage} resizeMode="cover" blurRadius={25} />
       <View style={styles.darkGradientOverlay} />
 
       <View style={styles.content}>
-        {/* Top Tag Row */}
+        {/* Top Badges */}
         <View style={styles.topRow}>
           <View style={styles.featuredBadge}>
             <Ionicons name="flame" size={12} color="#FFF" style={{ marginRight: 4 }} />
-            <Text style={styles.featuredText}>FEATURED HIT</Text>
+            <Text style={styles.featuredText}>TRENDING #1</Text>
           </View>
 
-          <View style={styles.genreBadge}>
-            <Text style={styles.genreText}>{track.genre}</Text>
+          <View style={styles.qualityBadge}>
+            <View style={styles.qualityDot} />
+            <Text style={styles.qualityText}>Hi-Fi 320kbps</Text>
           </View>
         </View>
 
         {/* Center Artwork & Metadata */}
         <View style={styles.trackDetailsRow}>
-          <Image source={{ uri: track.artwork }} style={styles.thumbImage} resizeMode="cover" />
+          <View style={styles.thumbWrapper}>
+            <Image source={{ uri: track.artwork }} style={styles.thumbImage} resizeMode="cover" />
+            {isPlaying && (
+              <View style={styles.playingBadge}>
+                <SoundwaveVisualizer isPlaying={true} barColor="#FFF" size="small" />
+              </View>
+            )}
+          </View>
 
           <View style={styles.textWrap}>
             <Text style={styles.trackTitle} numberOfLines={2}>
@@ -51,7 +59,7 @@ export const FeaturedHeroCard: React.FC<FeaturedHeroCardProps> = ({
               {track.artist}
             </Text>
             <Text style={styles.albumName} numberOfLines={1}>
-              {track.album}
+              {track.album} • {track.genre}
             </Text>
           </View>
         </View>
@@ -64,9 +72,9 @@ export const FeaturedHeroCard: React.FC<FeaturedHeroCardProps> = ({
             activeOpacity={0.85}
           >
             {isPlaying ? (
-              <SoundwaveVisualizer isPlaying={true} barColor="#FFF" size="small" />
+              <SoundwaveVisualizer isPlaying={true} barColor="#07090E" size="small" />
             ) : (
-              <Ionicons name="play" size={18} color="#FFF" style={{ marginRight: 6 }} />
+              <Ionicons name="play" size={17} color="#07090E" style={{ marginRight: 6 }} />
             )}
             <Text style={styles.playNowText}>
               {isPlaying ? 'Now Playing' : 'Play Track'}
@@ -94,17 +102,17 @@ const styles = StyleSheet.create({
   cardContainer: {
     marginHorizontal: 16,
     marginVertical: 10,
-    borderRadius: 20,
+    borderRadius: 22,
     overflow: 'hidden',
     position: 'relative',
     height: 195,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255, 255, 255, 0.14)',
     shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 14,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.28,
+    shadowRadius: 18,
+    elevation: 8,
   },
   bgImage: {
     ...StyleSheet.absoluteFill,
@@ -113,7 +121,7 @@ const styles = StyleSheet.create({
   },
   darkGradientOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(11, 13, 19, 0.82)',
+    backgroundColor: 'rgba(7, 9, 14, 0.82)',
   },
   content: {
     padding: 16,
@@ -128,41 +136,68 @@ const styles = StyleSheet.create({
   featuredBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.9)',
+    backgroundColor: '#EF4444',
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
+    paddingVertical: 3.5,
+    borderRadius: 10,
   },
   featuredText: {
     color: '#FFF',
     fontSize: 10,
     fontWeight: '800',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
-  genreBadge: {
-    backgroundColor: 'rgba(139, 92, 246, 0.25)',
+  qualityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 245, 155, 0.15)',
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 3.5,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.4)',
+    borderColor: 'rgba(0, 245, 155, 0.3)',
   },
-  genreText: {
-    color: '#C4B5FD',
+  qualityDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: Colors.primary,
+    marginRight: 5,
+  },
+  qualityText: {
+    color: Colors.primary,
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '800',
+    letterSpacing: 0.4,
   },
   trackDetailsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 4,
+    marginVertical: 2,
+  },
+  thumbWrapper: {
+    width: 66,
+    height: 66,
+    borderRadius: 14,
+    overflow: 'hidden',
+    position: 'relative',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 4,
   },
   thumbImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    width: '100%',
+    height: '100%',
+  },
+  playingBadge: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   textWrap: {
     flex: 1,
@@ -175,15 +210,15 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   artistName: {
-    fontSize: 12,
+    fontSize: 13,
     color: Colors.primary,
     fontWeight: '700',
     marginTop: 2,
   },
   albumName: {
     fontSize: 11,
-    color: Colors.textMuted,
-    marginTop: 1,
+    color: Colors.textSecondary,
+    marginTop: 2,
   },
   actionsRow: {
     flexDirection: 'row',
@@ -194,25 +229,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.primary,
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
     paddingVertical: 9,
     borderRadius: 20,
     shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 4,
   },
   playNowText: {
-    color: '#FFF',
+    color: '#07090E',
     fontSize: 13,
     fontWeight: '800',
     marginLeft: 6,
   },
   downloadIconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: 'rgba(255,255,255,0.12)',
     justifyContent: 'center',
     alignItems: 'center',

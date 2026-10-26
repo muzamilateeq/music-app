@@ -7,6 +7,7 @@ import { SoundwaveVisualizer } from './SoundwaveVisualizer';
 
 interface TrackListItemProps {
   track: Track;
+  index?: number;
   isCurrent: boolean;
   isPlaying: boolean;
   isDownloaded: boolean;
@@ -20,6 +21,7 @@ interface TrackListItemProps {
 
 export const TrackListItem: React.FC<TrackListItemProps> = ({
   track,
+  index,
   isCurrent,
   isPlaying,
   isDownloaded,
@@ -41,9 +43,25 @@ export const TrackListItem: React.FC<TrackListItemProps> = ({
     <TouchableOpacity
       style={[styles.container, isCurrent && styles.containerActive]}
       onPress={onPress}
-      activeOpacity={0.8}
+      activeOpacity={0.78}
     >
-      {/* Artwork */}
+      {/* Left Active Glow Indicator Strip */}
+      {isCurrent && <View style={styles.activeStrip} />}
+
+      {/* Index Number or Live Equalizer */}
+      {typeof index === 'number' && (
+        <View style={styles.indexWrap}>
+          {isCurrent && isPlaying ? (
+            <SoundwaveVisualizer isPlaying={true} barColor={Colors.primary} size="small" />
+          ) : (
+            <Text style={[styles.indexText, isCurrent && styles.indexTextActive]}>
+              {index + 1}
+            </Text>
+          )}
+        </View>
+      )}
+
+      {/* Artwork Thumbnail */}
       <View style={styles.artContainer}>
         <Image source={{ uri: track.artwork }} style={styles.artwork} resizeMode="cover" />
         {isCurrent && (
@@ -62,11 +80,13 @@ export const TrackListItem: React.FC<TrackListItemProps> = ({
           {track.title}
         </Text>
         <Text style={styles.artist} numberOfLines={1}>
-          {track.artist} • <Text style={styles.album}>{track.album}</Text>
+          {track.artist}
         </Text>
         <View style={styles.tagRow}>
           <Text style={styles.genreTag}>{track.genre}</Text>
           <Text style={styles.durationTag}>{formatDuration(track.durationMs)}</Text>
+          <View style={styles.qualityDot} />
+          <Text style={styles.hifiTag}>320k</Text>
         </View>
       </View>
 
@@ -76,6 +96,7 @@ export const TrackListItem: React.FC<TrackListItemProps> = ({
           style={styles.actionIconBtn}
           onPress={onToggleFavorite}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          activeOpacity={0.7}
         >
           <Ionicons
             name={isFavorite ? 'heart' : 'heart-outline'}
@@ -91,6 +112,7 @@ export const TrackListItem: React.FC<TrackListItemProps> = ({
             style={styles.actionIconBtn}
             onPress={onDeleteDownload || onDownload}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            activeOpacity={0.7}
           >
             <Ionicons name="checkmark-circle" size={22} color={Colors.primary} />
           </TouchableOpacity>
@@ -99,6 +121,7 @@ export const TrackListItem: React.FC<TrackListItemProps> = ({
             style={styles.actionIconBtn}
             onPress={onDownload}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            activeOpacity={0.7}
           >
             <Ionicons name="arrow-down-circle-outline" size={22} color={Colors.textSecondary} />
           </TouchableOpacity>
@@ -115,10 +138,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#161B26',
+    borderBottomColor: 'rgba(255, 255, 255, 0.04)',
+    position: 'relative',
   },
   containerActive: {
-    backgroundColor: '#161B26',
+    backgroundColor: 'rgba(0, 245, 155, 0.06)',
+  },
+  activeStrip: {
+    position: 'absolute',
+    left: 0,
+    top: 6,
+    bottom: 6,
+    width: 3.5,
+    backgroundColor: Colors.primary,
+    borderTopRightRadius: 2,
+    borderBottomRightRadius: 2,
+  },
+  indexWrap: {
+    width: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 6,
+  },
+  indexText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.textMuted,
+  },
+  indexTextActive: {
+    color: Colors.primary,
   },
   artContainer: {
     width: 52,
@@ -127,6 +175,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
     backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   artwork: {
     width: '100%',
@@ -146,7 +196,8 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 14,
     fontWeight: '700',
-    color: Colors.text,
+    color: '#FFF',
+    letterSpacing: -0.2,
   },
   titleActive: {
     color: Colors.primary,
@@ -155,21 +206,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textSecondary,
     marginTop: 2,
-  },
-  album: {
-    color: Colors.textMuted,
-    fontSize: 11,
+    fontWeight: '500',
   },
   tagRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
     marginTop: 4,
   },
   genreTag: {
     fontSize: 10,
     color: Colors.accentViolet,
-    fontWeight: '600',
+    fontWeight: '700',
     backgroundColor: 'rgba(139, 92, 246, 0.15)',
     paddingHorizontal: 6,
     paddingVertical: 1,
@@ -178,7 +225,21 @@ const styles = StyleSheet.create({
   durationTag: {
     fontSize: 10,
     color: Colors.textMuted,
-    fontWeight: '500',
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  qualityDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: Colors.textMuted,
+    marginHorizontal: 5,
+  },
+  hifiTag: {
+    fontSize: 9,
+    color: Colors.primary,
+    fontWeight: '800',
+    letterSpacing: 0.4,
   },
   actionsRow: {
     flexDirection: 'row',
@@ -186,6 +247,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   actionIconBtn: {
-    padding: 4,
+    padding: 5,
   },
 });

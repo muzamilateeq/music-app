@@ -11,18 +11,28 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   title = 'SoundWave',
-  subtitle = 'Discover & Download Music',
+  subtitle,
   rightBadge,
 }) => {
+  // Dynamic greeting based on time of day
+  const getGreeting = () => {
+    const hours = new Date().getHours();
+    if (hours < 12) return 'Good Morning ☀️';
+    if (hours < 17) return 'Good Afternoon 🌤️';
+    return 'Good Evening 🌙';
+  };
+
+  const displaySubtitle = subtitle || getGreeting();
+
   return (
     <View style={styles.header}>
       <View style={styles.leftRow}>
         <View style={styles.logoBadge}>
-          <Ionicons name="musical-notes" size={20} color="#FFF" />
+          <Ionicons name="musical-notes" size={20} color="#07090E" />
         </View>
         <View>
           <Text style={styles.title}>{title}</Text>
-          <Text style={styles.subtitle}>{subtitle}</Text>
+          <Text style={styles.subtitle}>{displaySubtitle}</Text>
         </View>
       </View>
 
@@ -51,39 +61,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoBadge: {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
     borderRadius: 12,
     backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 12,
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.45,
+    shadowRadius: 10,
+    elevation: 6,
   },
   title: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
-    color: Colors.text,
-    letterSpacing: -0.4,
+    color: '#FFF',
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 11,
+    fontSize: 12,
     color: Colors.textSecondary,
-    marginTop: 1,
+    marginTop: 2,
+    fontWeight: '500',
   },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E293B',
+    backgroundColor: 'rgba(0, 245, 155, 0.12)',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(0, 245, 155, 0.25)',
   },
   badgeDot: {
     width: 6,
@@ -93,8 +104,9 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   badgeText: {
-    color: Colors.textSecondary,
+    color: Colors.primary,
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
 });

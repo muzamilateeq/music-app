@@ -5,7 +5,7 @@ import { Colors } from '../constants/colors';
 interface SoundwaveVisualizerProps {
   isPlaying: boolean;
   barColor?: string;
-  size?: 'small' | 'large';
+  size?: 'small' | 'medium' | 'large';
 }
 
 export const SoundwaveVisualizer: React.FC<SoundwaveVisualizerProps> = ({
@@ -14,76 +14,93 @@ export const SoundwaveVisualizer: React.FC<SoundwaveVisualizerProps> = ({
   size = 'small',
 }) => {
   const isLarge = size === 'large';
-  const maxHeight = isLarge ? 36 : 18;
-  const barWidth = isLarge ? 4 : 2.5;
+  const isMedium = size === 'medium';
+  
+  const barCount = isLarge ? 16 : isMedium ? 8 : 4;
+  const maxHeight = isLarge ? 32 : isMedium ? 22 : 16;
+  const barWidth = isLarge ? 3 : isMedium ? 2.5 : 2.5;
+  const gap = isLarge ? 3 : 2.5;
 
-  const anim1 = useRef(new Animated.Value(0.3)).current;
-  const anim2 = useRef(new Animated.Value(0.7)).current;
-  const anim3 = useRef(new Animated.Value(0.5)).current;
-  const anim4 = useRef(new Animated.Value(0.9)).current;
+  // Staggered base rhythms for bars
+  const durations = [
+    340, 420, 290, 480, 360, 440, 310, 500,
+    330, 410, 280, 470, 350, 430, 300, 490,
+  ];
+
+  const peakHeights = [
+    0.9, 0.7, 1.0, 0.8, 0.95, 0.65, 0.85, 0.75,
+    0.9, 0.7, 1.0, 0.8, 0.95, 0.65, 0.85, 0.75,
+  ];
+
+  const anims = useRef<Animated.Value[]>(
+    Array.from({ length: 16 }, (_, i) => new Animated.Value(0.2 + (i % 3) * 0.1))
+  ).current;
 
   useEffect(() => {
     if (!isPlaying) {
-      anim1.setValue(0.3);
-      anim2.setValue(0.4);
-      anim3.setValue(0.3);
-      anim4.setValue(0.4);
+      anims.forEach((anim, i) => {
+        anim.setValue(0.2 + (i % 2) * 0.1);
+      });
       return;
     }
 
-    const createPulse = (anim: Animated.Value, duration: number, toValue: number) => {
+    const loops = anims.slice(0, barCount).map((anim, i) => {
+      const duration = durations[i % durations.length];
+      const peak = peakHeights[i % peakHeights.length];
+
       return Animated.loop(
         Animated.sequence([
           Animated.timing(anim, {
-            toValue,
+            toValue: peak,
             duration,
             useNativeDriver: false,
           }),
           Animated.timing(anim, {
-            toValue: 0.2,
-            duration,
+            toValue: 0.15,
+            duration: duration * 0.9,
             useNativeDriver: false,
           }),
         ])
       );
-    };
+    });
 
-    const loop1 = createPulse(anim1, 380, 1);
-    const loop2 = createPulse(anim2, 450, 0.85);
-    const loop3 = createPulse(anim3, 320, 0.95);
-    const loop4 = createPulse(anim4, 520, 0.8);
-
-    loop1.start();
-    loop2.start();
-    loop3.start();
-    loop4.start();
+    loops.forEach((loop) => loop.start());
 
     return () => {
-      loop1.stop();
-      loop2.stop();
-      loop3.stop();
-      loop4.stop();
+      loops.forEach((loop) => loop.stop());
     };
-  }, [isPlaying]);
+  }, [isPlaying, barCount]);
+
+  const displayedAnims = anims.slice(0, barCount);
 
   return (
-    <View style={[styles.container, { height: maxHeight }]}>
-      {[anim1, anim2, anim3, anim4].map((anim, idx) => (
-        <Animated.View
-          key={idx}
-          style={[
-            styles.bar,
-            {
-              width: barWidth,
-              backgroundColor: barColor,
-              height: anim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [4, maxHeight],
-              }),
-            },
-          ]}
-        />
-      ))}
+    <View style={[styles.container, { height: maxHeight, gap }]}>
+      {displayedAnims.map((anim, idx) => {
+        // Gradient color effect for studio visualizer
+        let color = barColor;
+        if (isLarge) {
+          if (idx < 5) color = Colors.primary;
+          else if (idx < 11) color = Colors.accentCyan;
+          else color = Colors.accentViolet;
+        }
+
+        return (
+          <Animated.View
+            key={idx}
+            style={[
+              styles.bar,
+              {
+                width: barWidth,
+                backgroundColor: color,
+                height: anim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [3, maxHeight],
+                }),
+              },
+            ]}
+          />
+        );
+      })}
     </View>
   );
 };
@@ -93,9 +110,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'center',
-    gap: 2.5,
   },
   bar: {
-    borderRadius: 2,
+    borderRadius: 3,
   },
 });

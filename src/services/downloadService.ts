@@ -43,8 +43,11 @@ export const downloadService = {
         await FileSystem.makeDirectoryAsync(downloadDir, { intermediates: true });
       }
 
+      // Sanitize track ID for filesystem safety
+      const safeId = track.id.replace(/[^a-zA-Z0-9_-]/g, '_');
+
       // Download audio file
-      const targetAudioPath = `${downloadDir}track_${track.id}.m4a`;
+      const targetAudioPath = `${downloadDir}track_${safeId}.m4a`;
       const downloadRes = await FileSystem.downloadAsync(track.previewUrl, targetAudioPath);
 
       if (downloadRes.status !== 200) {
@@ -54,7 +57,7 @@ export const downloadService = {
       // Cache artwork locally for offline viewing
       let localArtPath = track.artwork;
       try {
-        const artTarget = `${downloadDir}art_${track.id}.jpg`;
+        const artTarget = `${downloadDir}art_${safeId}.jpg`;
         const artRes = await FileSystem.downloadAsync(track.artwork, artTarget);
         if (artRes.status === 200) {
           localArtPath = artRes.uri;

@@ -1,15 +1,21 @@
 export const Colors = {
-  // Deep immersive Dark Mode (Spotify / Apple Music inspired)
-  background: '#0B0D13',
-  backgroundElevated: '#131620',
-  card: '#181C28',
-  cardBorder: '#232838',
+  // Deep immersive Dark Mode (Spotify & Apple Music Hi-Fi aesthetics)
+  background: '#07090E',
+  backgroundElevated: '#0E121B',
+  card: '#141824',
+  cardElevated: '#1C2234',
+  cardBorder: 'rgba(255, 255, 255, 0.08)',
+  cardBorderActive: 'rgba(0, 245, 155, 0.35)',
   
-  // Neon Green & Electric Violet Accents
-  primary: '#1DB954',         // Spotify Emerald Green
-  primaryDark: '#169C46',
-  accentViolet: '#8B5CF6',    // Neon Purple
-  accentCyan: '#06B6D4',      // Electric Cyan
+  // Neon Emerald & Electric Cyan Accents
+  primary: '#00F59B',           // Ultra-vibrant Emerald
+  primaryDark: '#05C478',
+  primaryGlow: 'rgba(0, 245, 155, 0.3)',
+  
+  accentViolet: '#8B5CF6',      // Neon Purple
+  accentCyan: '#06B6D4',        // Electric Cyan
+  accentAmber: '#F59E0B',       // Warm Amber
+  accentPink: '#EC4899',        // Electric Pink
   
   // Text
   text: '#FFFFFF',
@@ -21,7 +27,9 @@ export const Colors = {
   success: '#10B981',
   warning: '#F59E0B',
   
-  // Overlays
-  playerBg: '#0F121C',
-  glassOverlay: 'rgba(15, 18, 28, 0.88)',
+  // Glassmorphism & Overlays
+  playerBg: '#090C14',
+  playerSurface: 'rgba(16, 21, 33, 0.96)',
+  glassOverlay: 'rgba(7, 9, 14, 0.90)',
+  glassCard: 'rgba(255, 255, 255, 0.05)',
 };
