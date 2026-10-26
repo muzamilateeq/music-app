@@ -38,7 +38,6 @@ jobs:
         run: |
           cd ios
           WORKSPACE=$(ls -d *.xcworkspace | head -n 1)
-          # Exclude Pods schemes and select actual App scheme
           SCHEME_NAME=$(xcodebuild -workspace "$WORKSPACE" -list -json | jq -r '.workspace.schemes[] | select(startswith("Pods-") | not)' | head -n 1)
           echo "Building workspace: $WORKSPACE with app scheme: $SCHEME_NAME"
           
@@ -54,9 +53,15 @@ jobs:
             AD_HOC_CODE_SIGNING_ALLOWED=YES
 
           mkdir -p Payload
-          APP_PATH=$(find build/Build/Products/Release-iphoneos -name "*.app" -maxdepth 1 | head -n 1)
-          echo "Found app at: $APP_PATH"
-          cp -R "$APP_PATH" Payload/
+          echo "Searching for built .app bundle in derivedData..."
+          find build -type d -name "*.app"
+          
+          # Copy the compiled .app bundle into Payload directory
+          find build -type d -name "*.app" -exec cp -R {} Payload/ \;
+          
+          echo "Contents of Payload directory:"
+          ls -la Payload
+          
           zip -r SoundWave.ipa Payload
 
       - name: Upload IPA Artifact
