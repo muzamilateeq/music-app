@@ -38,31 +38,30 @@ jobs:
         run: |
           cd ios
           WORKSPACE=$(ls -d *.xcworkspace | head -n 1)
-          SCHEME_NAME=$(xcodebuild -workspace "$WORKSPACE" -list -json | jq -r '.workspace.schemes[] | select(startswith("Pods-") | not)' | head -n 1)
-          echo "Building workspace: $WORKSPACE with app scheme: $SCHEME_NAME"
+          # The main app scheme is always the exact name of the .xcodeproj
+          SCHEME_NAME=$(basename $(ls -d *.xcodeproj) .xcodeproj)
+          echo "Building workspace: $WORKSPACE with main app scheme: $SCHEME_NAME"
           
-          xcodebuild clean build \
+          xcodebuild archive \
             -workspace "$WORKSPACE" \
             -scheme "$SCHEME_NAME" \
             -configuration Release \
             -sdk iphoneos \
-            -derivedDataPath build \
+            -archivePath SoundWave.xcarchive \
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=YES \
             AD_HOC_CODE_SIGNING_ALLOWED=YES
 
           mkdir -p Payload
-          echo "Searching for built .app bundle in derivedData..."
-          find build -type d -name "*.app"
+          cp -R SoundWave.xcarchive/Products/Applications/*.app Payload/
           
-          # Copy the compiled .app bundle into Payload directory
-          find build -type d -name "*.app" -exec cp -R {} Payload/ \;
-          
-          echo "Contents of Payload directory:"
+          echo "Contents of Payload:"
           ls -la Payload
           
           zip -r SoundWave.ipa Payload
+          echo "Final IPA size:"
+          ls -lh SoundWave.ipa
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
