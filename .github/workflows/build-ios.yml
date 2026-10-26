@@ -34,24 +34,29 @@ jobs:
           cd ios
           pod install
 
-      - name: Build iOS App & Package IPA (Unsigned)
+      - name: Build iOS App & Package IPA
         run: |
           cd ios
           WORKSPACE=$(ls -d *.xcworkspace | head -n 1)
-          SCHEME_NAME=$(xcodebuild -workspace "$WORKSPACE" -list -json | jq -r '.workspace.schemes[0]')
-          echo "Building workspace: $WORKSPACE with scheme: $SCHEME_NAME"
-          xcodebuild -workspace "$WORKSPACE" \
+          # Exclude Pods schemes and select actual App scheme
+          SCHEME_NAME=$(xcodebuild -workspace "$WORKSPACE" -list -json | jq -r '.workspace.schemes[] | select(startswith("Pods-") | not)' | head -n 1)
+          echo "Building workspace: $WORKSPACE with app scheme: $SCHEME_NAME"
+          
+          xcodebuild clean build \
+            -workspace "$WORKSPACE" \
             -scheme "$SCHEME_NAME" \
             -configuration Release \
             -sdk iphoneos \
             -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            PROVISIONING_PROFILE=""
+            CODE_SIGNING_ALLOWED=YES \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES
 
           mkdir -p Payload
-          cp -R build/Build/Products/Release-iphoneos/*.app Payload/
+          APP_PATH=$(find build/Build/Products/Release-iphoneos -name "*.app" -maxdepth 1 | head -n 1)
+          echo "Found app at: $APP_PATH"
+          cp -R "$APP_PATH" Payload/
           zip -r SoundWave.ipa Payload
 
       - name: Upload IPA Artifact
